@@ -24,30 +24,26 @@
         Console.WriteLine($"Enter {settings.GridSize * settings.GridSize} digits (0 for empty cells):");
         string input = Console.ReadLine() ?? string.Empty;
 
+        CheckInput(input);
 
-
-        string cleanInput = new string(input.Where(char.IsDigit).ToArray());
-
-        if (cleanInput.Length != settings.ExpectedLength)
-        {
-            throw new InvalidInputException(settings.ExpectedLength, cleanInput.Length);
-        }
-
+        //Intilate the grid with the input
         for (int i = 0; i < settings.GridSize; i++)
         {
             for (int j = 0; j < settings.GridSize; j++)
             {
-                grid[i, j] = cleanInput[i * settings.GridSize + j] - '0';
+                grid[i, j] = input[i * settings.GridSize + j] - '0';
             }
         }
     }
 
+    //Prints the board
     public void Print()
     {
         var line = settings.ShowGridLines ? new string('-', settings.GridSize * 4 + 1) : "";
 
         for (int i = 0; i < settings.GridSize; i++)
         {
+
             if (settings.ShowGridLines)
             {
                 if (i % settings.BoxSize == 0) Console.WriteLine(line);
@@ -68,6 +64,17 @@
         }
 
         if (settings.ShowGridLines) Console.WriteLine(line);
+    }
+    private void CheckInput(string input) {
+        if (!input.All(char.IsDigit))
+        {
+            throw new InvalidInputCharExeption();
+        }
+
+        if (input.Length != settings.ExpectedLength)
+        {
+            throw new InvalidInputException(settings.ExpectedLength, input.Length);
+        }
     }
 
     public int GetValue(int row, int col) => grid[row, col];
