@@ -1,14 +1,21 @@
-﻿public class Board
+﻿using System.Runtime.CompilerServices;
+
+public class Board
 {
     private readonly int[,] grid;
     public readonly Settings settings;
-
+    public Box[] boxes;
+    public Line[] rows;
+    public Line[] cols;
     public Board(Settings settings)
     {
 
             
         this.settings = settings;
-
+        
+        boxes = new Box[settings.GridSize];
+        rows = new Line[settings.GridSize];
+        cols = new Line[settings.GridSize];
 
         //Initialize the grid as a 2D array
         grid = new int[settings.GridSize, settings.GridSize];
@@ -25,13 +32,23 @@
         string input = Console.ReadLine() ?? string.Empty;
 
         CheckInput(input);
-
-        //Intilate the grid with the input
         for (int i = 0; i < settings.GridSize; i++)
         {
-            for (int j = 0; j < settings.GridSize; j++)
+            boxes[i] = new Box(settings.GridSize);
+            rows[i] = new Line(settings.GridSize);
+            cols[i] = new Line(settings.GridSize);
+        }
+
+        //Intilate the grid with the input
+        for (int row = 0; row < settings.GridSize; row++)
+        {
+            for (int col = 0; col < settings.GridSize; col++)
             {
-                grid[i, j] = input[i * settings.GridSize + j] - '0';
+                int num = input[row * settings.GridSize + col] - '0';
+                grid[row, col] = num;
+                rows[row].Set(num);
+                cols[col].Set(num);
+                boxes[row / settings.BoxSize * settings.BoxSize + col / settings.BoxSize].Set(num);
             }
         }
     }
@@ -83,7 +100,14 @@
     }
 
     public int GetValue(int row, int col) => grid[row, col];
-    public void SetValue(int row, int col, int value) => grid[row, col] = value;
+    public void SetValue(int row, int col, int value) {
+        rows[row].Set(value , grid[row, col]);
+        cols[col].Set(value , grid[row, col]);
+        boxes[row / settings.BoxSize * settings.BoxSize + col / settings.BoxSize].Set(value , grid[row, col]);
+        grid[row, col] = value;
+        
+        
+    }
     public bool IsEmpty(int row, int col) => grid[row, col] == 0;
     public int Size => settings.GridSize;
 }

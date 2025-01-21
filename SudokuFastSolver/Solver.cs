@@ -75,23 +75,9 @@
     private bool IsSafe(int row, int col, int num)
     //The function IsSafe() is used to check if a number can be placed in a cell
     {
-        //Check if the number is already in the row or column
-        for (int x = 0; x < board.Size; x++)
-            if (board.GetValue(row, x) == num || board.GetValue(x, col) == num)
-                return false;
-
-
-        //Check if the number is already in the box
-        int startRow = row - row % board.settings.BoxSize;
-        int startCol = col - col % board.settings.BoxSize;
-
-        for (int i = 0; i < board.settings.BoxSize; i++)
-            for (int j = 0; j < board.settings.BoxSize; j++)
-                if (board.GetValue(startRow + i, startCol + j) == num)
-                    return false;
-
-        //If the number is not in the row, column or box, return true
-        return true;
+        return !(board.rows[row].Contains[num - 1] ||
+            board.cols[col].Contains[num - 1] ||
+            board.boxes[row / board.settings.BoxSize * board.settings.BoxSize + col / board.settings.BoxSize].Contains[num - 1]);
     }
 
     public void PrintSolution()
