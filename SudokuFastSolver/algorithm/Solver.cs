@@ -51,6 +51,9 @@
         if (!board.IsEmpty(row, col))
             return Solve(row, col + 1);
 
+
+
+        
         //If the cell is empty
         //try to fill it with a number
         for (int num = 1; num <= board.Size; num++)
