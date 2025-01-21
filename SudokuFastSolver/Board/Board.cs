@@ -7,7 +7,7 @@ public class Board
     public Box[] boxes;
     public Line[] rows;
     public Line[] cols;
-    public Board(Settings settings)
+    public Board(Settings settings , bool getUserInput = true)
     {
 
             
@@ -21,7 +21,8 @@ public class Board
         grid = new int[settings.GridSize, settings.GridSize];
 
         //Get the input from the user
-        ReadInput();
+        if (getUserInput)
+            ReadInput();
     }
 
 
@@ -46,6 +47,9 @@ public class Board
             {
                 int num = input[row * settings.GridSize + col] - '0';
                 grid[row, col] = num;
+                
+                if (num != 0 && (rows[row].Contains[num - 1] || cols[col].Contains[num - 1] || boxes[row / settings.BoxSize * settings.BoxSize + col / settings.BoxSize].Contains[num - 1]))
+                    throw new Exception();//TODO: chagne to custom exeption
                 rows[row].Set(num);
                 cols[col].Set(num);
                 boxes[row / settings.BoxSize * settings.BoxSize + col / settings.BoxSize].Set(num);
@@ -110,4 +114,29 @@ public class Board
     }
     public bool IsEmpty(int row, int col) => grid[row, col] == 0;
     public int Size => settings.GridSize;
+    public Board Clone()
+    {
+        // Create a new board with the same settings
+        var clonedBoard = new Board(settings , false);
+
+        // Deep copy the grid
+        for (int row = 0; row < settings.GridSize; row++)
+        {
+            for (int col = 0; col < settings.GridSize; col++)
+            {
+                clonedBoard.grid[row, col] = this.grid[row, col];
+            }
+        }
+
+        // Deep copy rows, cols, and boxes
+        for (int i = 0; i < settings.GridSize; i++)
+        {
+            clonedBoard.rows[i] = this.rows[i].Clone();
+            clonedBoard.cols[i] = this.cols[i].Clone();
+            clonedBoard.boxes[i] = this.boxes[i].Clone();
+        }
+
+        return clonedBoard;
+    }
+
 }

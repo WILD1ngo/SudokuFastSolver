@@ -33,4 +33,10 @@ public struct Line
             Console.WriteLine($"Contains[{i}] = {Contains[i]}");
         }
     }
+    public Line Clone()
+    {
+        var clonedLine = new Line(Contains.Length);
+        Array.Copy(this.Contains, clonedLine.Contains, Contains.Length);
+        return clonedLine;
+    }
 }

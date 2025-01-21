@@ -37,5 +37,11 @@ public struct Box
             Console.WriteLine($"Contains[{i}] = {Contains[i]}");
         }
     }
+    public Box Clone()
+    {
+        var clonedBox = new Box(Contains.Length);
+        Array.Copy(this.Contains, clonedBox.Contains, Contains.Length);
+        return clonedBox;
+    }
 }
 
