@@ -9,7 +9,7 @@ public class Program
 
             //Change the settings 
             var settings = new Settings(
-            gridSize: 4,  // The size of the grid
+            gridSize: 9,  // The size of the grid
             showEmptySquare: false, // Show empty squares 
             emptyCell: "0", // How to represent empty squares
             showGridLines: true // Show grid lines

@@ -2,10 +2,15 @@
 {
     private readonly Board board;
     private bool solved;
+    public TimeTracker timeTracker = new TimeTracker();
     public Solver(Board board)
     {
         this.board = board;
+
+        timeTracker.Start();
         solved = Solve();
+        timeTracker.Stop();
+        timeTracker.PrintElapsedTime();
     }
 
     public bool Solve() => Solve(0, 0);
