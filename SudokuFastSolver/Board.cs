@@ -1,7 +1,7 @@
 ﻿public class Board
 {
     private readonly int[,] grid;
-    private readonly Settings settings;
+    public readonly Settings settings;
 
     public Board(Settings settings)
     {
@@ -39,7 +39,7 @@
     //Prints the board
     public void Print()
     {
-        var line = settings.ShowGridLines ? new string('-', settings.GridSize * 4 + 1) : "";
+        var line = settings.ShowGridLines ? new string('-', settings.GridSize * 3 + settings.BoxSize + 1) : "";
 
         for (int i = 0; i < settings.GridSize; i++)
         {
@@ -68,6 +68,11 @@
     private void CheckInput(string input) {
         if (!input.All(char.IsDigit))
         {
+            throw new InvalidInputCharExeption();
+        }
+        if (input.Any(c => (c - '0') > settings.GridSize))
+        { 
+            //TODO: change the exeption type
             throw new InvalidInputCharExeption();
         }
 
