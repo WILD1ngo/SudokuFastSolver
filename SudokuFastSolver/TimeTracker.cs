@@ -19,8 +19,9 @@ public class TimeTracker
         return timeTaken.TotalMilliseconds;
     }
 
-    // Formats and prints the elapsed time in a user-friendly way
-    public void PrintElapsedTime()
+
+    // Prints the time taken
+    public void PrintTime()
     {
         TimeSpan timeTaken = _endTime - _startTime;
         Console.WriteLine($"\n\nTime taken: {timeTaken.TotalMilliseconds} ms");

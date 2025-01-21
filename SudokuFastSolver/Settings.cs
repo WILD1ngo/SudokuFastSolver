@@ -45,7 +45,7 @@
 
 
 
-        // Check if GridSize is within reasonable bounds (optional)
+        // Check if GridSize is within the allowed range
         if (GridSize > MaxGridSize)
         {
             throw new InvalidGridSizeException(

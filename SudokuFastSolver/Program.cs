@@ -22,8 +22,10 @@ public class Program
 
             //Print the board
             board.Print();
-
+            //solve the board
             var solver = new Solver(board);
+
+            //Print the solution
             solver.PrintSolution();
 
         }

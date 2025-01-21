@@ -10,7 +10,7 @@
         timeTracker.Start();
         solved = Solve();
         timeTracker.Stop();
-        timeTracker.PrintElapsedTime();
+        
     }
 
     public bool Solve() => Solve(0, 0);
@@ -96,6 +96,8 @@
 
     public void PrintSolution()
     {
+
+        timeTracker.PrintTime();
         if (solved)
         {
             Console.WriteLine("\nSolved Board:");
