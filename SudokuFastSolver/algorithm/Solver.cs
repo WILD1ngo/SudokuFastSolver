@@ -1,11 +1,10 @@
 ﻿using System.Data;
 using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
 
 public class Solver
 {
     private readonly Board board;
-    public bool solved;
+    private bool solved;
     public TimeTracker timeTracker = new TimeTracker();
     public Solver(Board board)
     {
@@ -14,7 +13,7 @@ public class Solver
         timeTracker.Start();
         solved = Solve();
         timeTracker.Stop();
-
+        
     }
 
 
@@ -25,25 +24,8 @@ public class Solver
     {
 
         //Find the row and col with the lest amount of options
-        var (row, col, count) = FindCellWithFewestOptions();
+        var (row, col ,count) = FindCellWithFewestOptions();
 
-
-        if (count > 2)
-        {
-            (int Hrow, int Hcol, int num) = FindHiddenSingles();
-            if (Hrow != -1 && Hcol != -1)
-            {
-                board.SetValue(Hrow, Hcol, num);
-
-                if (Solve())
-                    return true;
-                //}
-                //if it is not safe, backtrack
-                board.SetValue(Hrow, Hcol, 0);
-                return false;
-            }
-
-        }
         //If the row is equal to the size of the board
         //and the column is equal to the size of the board,
         //return true
@@ -52,7 +34,7 @@ public class Solver
             return true;
 
 
-
+        
 
 
 
@@ -63,12 +45,13 @@ public class Solver
             //check if the number is safe to put in the cell
             if (IsSafe(row, col, num))
             {
-                /*
-                if (count > 2) {
+                if (count > 1)
+                {
+                    /*
                     int NakedPairRow = 0;
                     int NakedPairCol = 0;
                     (NakedPairRow, NakedPairCol) = FindNakedPair(row, col, num);
-                    if (NakedPairRow != 0 && NakedPairCol != 0)
+                     if (NakedPairRow != 0 && NakedPairCol != 0)
                     {
                         board.SetValue(row, col, num);
                         if (Solve())
@@ -80,9 +63,10 @@ public class Solver
                         board.SetValue(NakedPairRow, NakedPairCol, 0);
                         return false;
                     }
-                }
-                */
+                    */
 
+                }
+                
                 //if it is safe, put the number in the cell
                 board.SetValue(row, col, num);
 
@@ -91,7 +75,7 @@ public class Solver
                 //}
                 //if it is not safe, backtrack
                 board.SetValue(row, col, 0);
-
+                
             }
         }
         //if no number is safe to put in the cell, return false
@@ -99,7 +83,7 @@ public class Solver
         return false;
     }
 
-
+    
     private bool IsSafe(int row, int col, int num)
     //The function IsSafe() is used to check if a number can be placed in a cell
     {
@@ -108,15 +92,13 @@ public class Solver
             board.boxes[row / board.settings.BoxSize * board.settings.BoxSize + col / board.settings.BoxSize].Contains[num - 1]);
     }
 
-
-    /*
     private (int row, int col) FindNakedPair(int row, int col, int num)
     {
         int boxStartRow = (row / board.settings.BoxSize) * board.settings.BoxSize; // Calculate the starting row of the box
         int boxStartCol = (col / board.settings.BoxSize) * board.settings.BoxSize; // Calculate the starting column of the box
         int count = 0; // Count of cells that can accept 'num'
-        int returnRow = 0;
-        int returnCol = 0;
+        int returnRow = 0; 
+        int returnCol = 0; 
 
         // Iterate through the 3x3 box
         for (int r = boxStartRow; r < boxStartRow + board.settings.BoxSize; r++)
@@ -143,9 +125,10 @@ public class Solver
             }
         }
 
+        // Return true if 'num' can only be placed in exactly two cells in the box
+        // and the current cell is one of them
         return (returnRow, returnCol);
     }
-    */
     private int CountValidNumbers(int row, int col)
     {
         int count = 0;
@@ -156,9 +139,7 @@ public class Solver
         }
         return count;
     }
-
-    
-    private (int row, int col, int count) FindCellWithFewestOptions()
+    private (int row, int col , int count) FindCellWithFewestOptions()
     {
         int minOptions = int.MaxValue;
         int bestRow = -1, bestCol = -1;
@@ -178,109 +159,16 @@ public class Solver
 
                         // Exit early if a cell with one option is found
                         if (minOptions == 1)
-                            return (bestRow, bestCol, 1);
+                            return (bestRow, bestCol , 1);
 
                     }
                 }
             }
         }
 
-        return (bestRow, bestCol, minOptions);
+        return (bestRow, bestCol , minOptions);
     }
 
-    public (int row, int col , int num) FindHiddenSingles()
-    {
-        int boardSize = board.Size;
-        int boxSize = board.settings.BoxSize;
-
-        // Precompute candidates for all empty cells
-        var candidates = new HashSet<int>[boardSize, boardSize];
-        for (int row = 0; row < boardSize; row++)
-        {
-            for (int col = 0; col < boardSize; col++)
-            {
-                if (board.IsEmpty(row, col))
-                {
-                    candidates[row, col] = new HashSet<int>();
-                    for (int num = 1; num <= boardSize; num++)
-                    {
-                        if (IsSafe(row, col, num))
-                            candidates[row, col].Add(num);
-                    }
-                }
-            }
-        }
-
-        // Check for hidden singles
-        for (int num = 1; num <= boardSize; num++)
-        {
-            // Check rows
-            for (int row = 0; row < boardSize; row++)
-            {
-                int count = 0;
-                int lastCol = -1;
-                for (int col = 0; col < boardSize; col++)
-                {
-                    if (candidates[row, col]?.Contains(num) == true)
-                    {
-                        count++;
-                        lastCol = col;
-                        if (count > 1) break; // More than one position for num
-                    }
-                }
-                if (count == 1)
-                    return (row, lastCol , num);
-            }
-
-            // Check columns
-            for (int col = 0; col < boardSize; col++)
-            {
-                int count = 0;
-                int lastRow = -1;
-                for (int row = 0; row < boardSize; row++)
-                {
-                    if (candidates[row, col]?.Contains(num) == true)
-                    {
-                        count++;
-                        lastRow = row;
-                        if (count > 1) break; // More than one position for num
-                    }
-                }
-                if (count == 1)
-                    return (lastRow, col , num);
-            }
-
-            // Check boxes
-            for (int boxRow = 0; boxRow < boardSize; boxRow += boxSize)
-            {
-                for (int boxCol = 0; boxCol < boardSize; boxCol += boxSize)
-                {
-                    int count = 0;
-                    int lastRow = -1, lastCol = -1;
-
-                    for (int row = boxRow; row < boxRow + boxSize; row++)
-                    {
-                        for (int col = boxCol; col < boxCol + boxSize; col++)
-                        {
-                            if (candidates[row, col]?.Contains(num) == true)
-                            {
-                                count++;
-                                lastRow = row;
-                                lastCol = col;
-                                if (count > 1) break; // More than one position for num
-                            }
-                        }
-                        if (count > 1) break;
-                    }
-                    if (count == 1)
-                        return (lastRow, lastCol , num) ;
-                }
-            }
-        }
-
-        // No hidden singles found
-        return (-1, -1 , -1);
-    }
     public void PrintSolution()
     {
 

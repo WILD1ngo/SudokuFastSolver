@@ -4,37 +4,41 @@ public class Board
 {
     private readonly int[,] grid;
     public readonly Settings settings;
-    public Tile[,] tiles;
-
-
-
-    public Board(Settings settings , bool getUserInput = true , string input = "")
+    public Box[] boxes;
+    public Line[] rows;
+    public Line[] cols;
+    public Board(Settings settings , bool getUserInput = true)
     {
 
             
         this.settings = settings;
-
-
-        tiles = new Tile[settings.GridSize, settings.GridSize];
+        
+        boxes = new Box[settings.GridSize];
+        rows = new Line[settings.GridSize];
+        cols = new Line[settings.GridSize];
 
         //Initialize the grid as a 2D array
         grid = new int[settings.GridSize, settings.GridSize];
 
         //Get the input from the user
         if (getUserInput)
-            ReadInput(input);
+            ReadInput();
     }
 
 
-    private void ReadInput(string input = "")
+    private void ReadInput()
     {
 
         Console.WriteLine($"Enter {settings.GridSize * settings.GridSize} digits (0 for empty cells):");
-        if (input == "")
-            input = Console.ReadLine() ?? string.Empty;
+        string input = Console.ReadLine() ?? string.Empty;
 
         CheckInput(input);
-        
+        for (int i = 0; i < settings.GridSize; i++)
+        {
+            boxes[i] = new Box(settings.GridSize);
+            rows[i] = new Line(settings.GridSize);
+            cols[i] = new Line(settings.GridSize);
+        }
 
         //Intilate the grid with the input
         for (int row = 0; row < settings.GridSize; row++)
@@ -44,7 +48,11 @@ public class Board
                 int num = input[row * settings.GridSize + col] - '0';
                 grid[row, col] = num;
                 
-                
+                if (num != 0 && (rows[row].Contains[num - 1] || cols[col].Contains[num - 1] || boxes[row / settings.BoxSize * settings.BoxSize + col / settings.BoxSize].Contains[num - 1]))
+                    throw new Exception();//TODO: chagne to custom exeption
+                rows[row].Set(num);
+                cols[col].Set(num);
+                boxes[row / settings.BoxSize * settings.BoxSize + col / settings.BoxSize].Set(num);
             }
         }
     }
