@@ -1,177 +1,263 @@
-﻿using System.Data;
-using System.Net.Http.Headers;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using static Board;
 
 public class Solver
 {
     private readonly Board board;
     private bool solved;
     public TimeTracker timeTracker = new TimeTracker();
+    public int deathCount = 0;
+
+
+
+    /// <summary>
+    /// Initializes a new solver instance and starts solving the puzzle.
+    /// </summary>
     public Solver(Board board)
     {
         this.board = board;
-
         timeTracker.Start();
         solved = Solve();
         timeTracker.Stop();
-        
     }
 
 
-    // because it is a complex algorithm with recursion
-    // so theres a lot of text but its quite simple
+
+
+
+
+    /// <summary>
+    /// Main solving method that applies rules before attempting backtracking.
+    /// </summary>
     private bool Solve()
-    //The function Solve() is used to solve the sudoku board
     {
+        // Try rule-based solving 
+        ApplyRules();
 
-        //Find the row and col with the lest amount of options
-        var (row, col ,count) = FindCellWithFewestOptions();
+        deathCount++;
 
-        //If the row is equal to the size of the board
-        //and the column is equal to the size of the board,
-        //return true
+        var (row, col, possibilities) = FindCellWithMinPossibilities();
 
-        if (row == -1 && col == -1)
-            return true;
 
+        // Puzzle solved condition (no empty cells)
+        if (possibilities == -1) return true;
+
+        // Contradiction found (empty cell with no possibilities)
+        if (possibilities == 0) return false;
 
         
+        //Console.WriteLine($"Guessing at {row}, {col}");
+         
 
-
-
-
-        //try to fill it with a number
-        for (int num = 1; num <= board.Size; num++)
+        foreach (var guess in board.cells[row, col].Possibilities.ToList())
         {
-            //check if the number is safe to put in the cell
-            if (IsSafe(row, col, num))
+            board.SetValue(row, col, guess);
+            //Console.WriteLine($"Guessing at {row}, {col} with {guess}");
+            //board.Print();
+            
+
+            
+            if (Solve())
             {
-                if (count > 1)
-                {
-                    /*
-                    int NakedPairRow = 0;
-                    int NakedPairCol = 0;
-                    (NakedPairRow, NakedPairCol) = FindNakedPair(row, col, num);
-                     if (NakedPairRow != 0 && NakedPairCol != 0)
-                    {
-                        board.SetValue(row, col, num);
-                        if (Solve())
-                            return true;
-                        board.SetValue(row, col, 0);
-                        board.SetValue(NakedPairRow, NakedPairCol, num);
-                        if (Solve())
-                            return true;
-                        board.SetValue(NakedPairRow, NakedPairCol, 0);
-                        return false;
-                    }
-                    */
-
-                }
-                
-                //if it is safe, put the number in the cell
-                board.SetValue(row, col, num);
-
-                if (Solve())
-                    return true;
-                //}
-                //if it is not safe, backtrack
-                board.SetValue(row, col, 0);
-                
+                // Commit successful solution
+                return true;
             }
+            board.SetValue(row, col, 0);
+            //board.Print();
         }
-        //if no number is safe to put in the cell, return false
-        //its unsolvable
-        return false;
+
+        // All possibilities exhausted
+        return false; // No valid solutions in this branch
     }
 
-    
-    private bool IsSafe(int row, int col, int num)
-    //The function IsSafe() is used to check if a number can be placed in a cell
-    {
-        return !(board.rows[row].Contains[num - 1] ||
-            board.cols[col].Contains[num - 1] ||
-            board.boxes[row / board.settings.BoxSize * board.settings.BoxSize + col / board.settings.BoxSize].Contains[num - 1]);
-    }
 
-    private (int row, int col) FindNakedPair(int row, int col, int num)
+    /// <summary>
+    /// Applies solving rules and returns the number of solutions found.
+    /// </summary>
+    private void ApplyRules()
     {
-        int boxStartRow = (row / board.settings.BoxSize) * board.settings.BoxSize; // Calculate the starting row of the box
-        int boxStartCol = (col / board.settings.BoxSize) * board.settings.BoxSize; // Calculate the starting column of the box
-        int count = 0; // Count of cells that can accept 'num'
-        int returnRow = 0; 
-        int returnCol = 0; 
-
-        // Iterate through the 3x3 box
-        for (int r = boxStartRow; r < boxStartRow + board.settings.BoxSize; r++)
+        while (true)
         {
-            for (int c = boxStartCol; c < boxStartCol + board.settings.BoxSize; c++)
-            {
-                //Console.WriteLine($"r = {r} , c = {c}");
-                // Skip the current cell if it's already filled
-                if (board.GetValue(r, c) != 0)
-                    continue;
-                if (r == row && c == col)
-                    continue;
+            // Try the simpler rules first
+            if (ApplySingleRule())
+                continue;
+            if (ApplyNakedRule())
+                continue;
+            break;
+        }
 
-                // Check if 'num' is a valid option for this cell
-                if (IsSafe(r, c, num))
+    }
+    /// <summary>
+    /// Applies the single candidate rule to find cells with only one possibility.
+    /// </summary>
+    private bool ApplySingleRule()
+    {
+        bool match = false;
+        for (int row = 0; row < board.settings.GridSize; row++)
+        {
+            for (int col = 0; col< board.settings.GridSize; col++)
+            {
+                
+                if (board.cells[row, col].Value == 0 && board.cells[row,col].Possibilities.Count == 1) 
                 {
-                    count++;
-                    returnRow = r;
-                    returnCol = c;
-                    // If count exceeds 2, early exit since it's not a naked pair
-                    if (count > 1)
-                        return (0, 0);
+                    match = true;
+                    int value = board.cells[row, col].Possibilities[0];  // Get the actual value 
+                    board.SetValue(row, col, value);
                 }
             }
         }
-
-        // Return true if 'num' can only be placed in exactly two cells in the box
-        // and the current cell is one of them
-        return (returnRow, returnCol);
+        return match;
     }
-    private int CountValidNumbers(int row, int col)
-    {
-        int count = 0;
-        for (int num = 1; num <= board.Size; num++)
-        {
-            if (IsSafe(row, col, num))
-                count++;
-        }
-        return count;
-    }
-    private (int row, int col , int count) FindCellWithFewestOptions()
-    {
-        int minOptions = int.MaxValue;
-        int bestRow = -1, bestCol = -1;
 
-        for (int row = 0; row < board.Size; row++)
+    /// <summary>
+    /// Applies the naked pairs/triples rule to find and eliminate candidates.
+    /// </summary>
+    private bool ApplyNakedRule()
+    {
+        bool match = false;
+        for (int i = 0; i < board.settings.GridSize * 3; i++)  // 9 rows + 9 columns + 9 blocks
         {
-            for (int col = 0; col < board.Size; col++)
+            if (ApplyNakedRuleToRegion(board.regions[i]))
             {
-                if (board.IsEmpty(row, col))
+                match = true;
+            }
+        }
+        return match;
+    }
+
+    /// <summary>
+    /// Applies naked tuple rules to a specific region (row, column, or block).
+    /// </summary>
+    private bool ApplyNakedRuleToRegion(List<Cell> region)
+    {
+        bool match = false;
+        var emptyCells = new List<int>();
+
+        // Find empty cells in the region
+        for (int i = 0; i < board.settings.GridSize; i++)
+        {
+            if (region[i].Value == 0)
+            {
+                emptyCells.Add(i);
+            }
+        }
+
+        // Check for naked 2 - 8 pairs
+        for (int r = 2; r <= board.settings.GridSize - 1; r++)
+        {
+            var combinations = FindCombinations(emptyCells, r, 0);
+            foreach (var combo in combinations)
+            {
+                var numbers = new bool[board.settings.GridSize];
+
+                // Collect all candidate values for the combination
+                foreach (int cellIndex in combo)
                 {
-                    int options = CountValidNumbers(row, col);
-                    if (options < minOptions)
+                    foreach (int value in board.cells[region[cellIndex].Row, region[cellIndex].Col].Possibilities)
                     {
-                        minOptions = options;
-                        bestRow = row;
-                        bestCol = col;
-
-                        // Exit early if a cell with one option is found
-                        if (minOptions == 1)
-                            return (bestRow, bestCol , 1);
-
+                        if (value > 0)  // Skip the first element (current value)
+                            numbers[value - 1] = true;
                     }
                 }
+
+                // Count how many numbers are used
+                int count = numbers.Count(x => x);
+
+                if (count <= r)
+                {
+                    // Found a naked tuple, remove these values from other cells
+                    for (int i = 0; i < board.settings.GridSize; i++)
+                    {
+                        if (!combo.Contains(i) && region[i].Value == 0)
+                        {
+                            bool changed = false;
+                            for (int value = 1; value <= board.settings.GridSize; value++)
+                            {
+                                if (numbers[value - 1])
+                                {
+                                    if (board.cells[region[i].Row, region[i].Col].Possibilities.Remove(value))
+                                        changed = true;
+                                }
+                            }
+                            if (changed)
+                                match = true;
+                        }
+                    }
+                }
             }
         }
-
-        return (bestRow, bestCol , minOptions);
+        return match;
     }
 
+    /// <summary>
+    /// Recursive method to find all possible combinations.
+    /// </summary>
+    private List<List<int>> FindCombinations(List<int> numbers, int r, int startIndex)
+    {
+        if (r == 0)
+        {
+            return new List<List<int>> { new List<int>() };
+        }
+
+        if (startIndex >= numbers.Count)
+        {
+            return new List<List<int>>();
+        }
+
+        var combinations = new List<List<int>>();
+
+        // Include current number
+        var withCurrent = FindCombinations(numbers, r - 1, startIndex + 1);
+        foreach (var combo in withCurrent)
+        {
+            combo.Add(numbers[startIndex]);
+            combinations.Add(combo);
+        }
+
+        // Exclude current number
+        var withoutCurrent = FindCombinations(numbers, r, startIndex + 1);
+        combinations.AddRange(withoutCurrent);
+
+        return combinations;
+    }
+
+
+    private (int row, int col, int possibilities) FindCellWithMinPossibilities()
+    {
+        int minRow = -1, minCol = -1;
+        int minCount = int.MaxValue;
+        bool solved = true;
+
+        for (int row = 0; row < board.settings.GridSize; row++)
+        {
+            for (int col = 0; col < board.settings.GridSize; col++)
+            {
+                Cell cell = board.cells[row, col];
+
+                if (cell.Value != 0) continue;
+                solved = false;
+                int currentCount = cell.Possibilities.Count;
+
+                if (currentCount < minCount)
+                {
+                    minCount = currentCount;
+                    minRow = row;
+                    minCol = col;
+                }
+            }
+        }
+        if (solved) return (-1, -1, -1);
+        return (minRow, minCol, minCount);
+    }
+
+    /// <summary>
+    /// Prints the solution and solving statistics.
+    /// </summary>
     public void PrintSolution()
     {
-
+        Console.WriteLine($"Backtrack steps: {deathCount}");
         timeTracker.PrintTime();
         if (solved)
         {
@@ -180,7 +266,9 @@ public class Solver
         }
         else
         {
+
             Console.WriteLine("\nNo solution exists.");
+            
         }
     }
 }

@@ -15,10 +15,13 @@ public class Program
             showGridLines: true // Show grid lines
             );
 
+            // Create a SudokuParser object
+            Parser parser = new Parser(settings);
+            
 
 
             //Initialize the board and get the input from the user
-            var board = new Board(settings);
+            var board = new Board(parser.Grid, settings);
 
             //Print the board
             board.Print();
