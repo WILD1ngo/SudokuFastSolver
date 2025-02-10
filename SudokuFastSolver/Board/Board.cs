@@ -1,338 +1,748 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using static Board;
+﻿using System.Diagnostics;
+using System.Numerics;
+using System.Reflection;
+using System.Threading.Channels;
+using System.Threading;
 
+
+/// <summary>
+/// Board class stores the board 
+/// 
+///  also checks if the board is valid
+///  uses some huristics to check
+/// </summary>
 public class Board
 {
+    /// <summary>
+    /// The size of one side of the Sudoku board
+    /// like 4 , 9 , 16 , 25
+    /// </summary>
+    public int size;
     
 
-    public Cell[,] cells;
-    // Contains all cells in the board
-    // 2D array
-    // 1 0 0 
-    // 0 0 0
-    // 0 0 0
-    //
-    public List<Cell>[] regions { get; set; } // Contains all regions (rows, columns, boxes)
-
-    // In 9x9 grid:
-    // regions[0] to regions[8]     -> represent rows
-    // regions[9] to regions[17]    -> represent columns
-    // regions[18] to regions[26]   -> represent 3x3 boxes
-
-
-
-
-    public Settings settings;
-
-    public Board(int[,] initialGrid, Settings settings)
-    {
-        this.settings = settings;
-        cells = new Cell[settings.GridSize, settings.GridSize];
-        regions = new List<Cell>[settings.GridSize * 3];  // Rows + Columns + Boxes
-
-        InitializeCells();
-        InitializeRegions();
-        SetBoard(initialGrid);
-    }
 
 
     /// <summary>
-    /// Initializes all cells in the board with their coordinates.
+    /// The square root of the board size 
+    /// for example (3 for a 9x9 puzzle).
     /// </summary>
-    private void InitializeCells()
+    public int sqrtSize;
+
+
+
+    /// <summary>
+    /// One-dimensional array representing the Sudoku board.
+    /// Values are stored row by row,
+    /// For a 9x9 board, size of 81
+    /// </summary>
+    public int[] board;
+
+
+
+    /// <summary>
+    /// List of Cell objects representing empty positions on the board.
+    /// Each Cell contains row, column, and box information.
+    /// Used to track remaining cells to be filled during solving.
+    /// 
+    /// very importent for changing the order of cells for sorting then finding where
+    /// to change staff
+    /// </summary>
+    public List<Cell> emptyCells;
+
+
+    /// <summary>
+    /// Bitmask array for each row, where each bit represents a possible value.
+    /// For example, in a 9x9 puzzle,
+    /// if rows[0] = 0b111111111, it means
+    /// all numbers 1-9 are still possible in that row.
+    /// When a number is placed, its corresponding bit is cleared.
+    /// 
+    /// 00000000
+    /// 
+    /// also its a uint (unsigned int because all 32 bit needed)
+    /// 
+    /// <summary>
+    public uint[] rows;
+
+
+
+
+    /// <summary>
+    /// Same for colums
+    /// </summary>
+    public uint[] cols;
+
+
+    /// <summary>
+    /// Same for boxes 
+    /// box definetion is 3x3 (in a 9x9 board)
+    /// </summary>
+    public uint[] boxes;
+
+
+    /// <summary>
+    // Bitmask array storing the column positions for each box.
+    /// Used to quickly determine which columns intersect with a particular box.
+    /// For a 9x9 puzzle, boxes 0,3,6 have columns 0-2, boxes 1,4,7 have columns 3-5, etc.
+    /// </summary>
+    public uint[] boxColumnMasks;
+
+
+    /// <summary>
+    /// Array of BoxInfo containing the boundary information for each box.
+    /// Each BoxInfo stores the starting and ending row/column indices for that box.
+    /// Used for efficient iteration
+    /// 
+    /// over cells within a specific box
+    /// 
+    /// 
+    /// </summary>
+    public BoxInfo[] boxInfos;
+
+
+    /// <summary>
+    /// Initializes a new instance of the Board class with pre-allocated space for empty cells.
+    /// 
+    /// 
+    /// </summary>
+    public Board()
     {
-        for (int row = 0; row < settings.GridSize; row++)
+        // Pre-allocate for 9x9 board.
+        emptyCells = new List<Cell>(81);
+    }
+
+
+
+
+
+    /// <summary>
+    /// Loads a Sudoku puzzle from a string input. The input string can contain whitespace,
+    /// which is ignored. Supports puzzle sizes of 4x4, 9x9, 16x16, and 25x25.
+    ///
+    /// Throws ArgumentException if the input length is invalid or contains invalid characters.
+    /// 
+    /// 
+    /// probebly not the most generic code i have ever seen 
+    /// TODO : change this garbage code
+    /// </summary>
+    /// <param name="input">String representation of the Sudoku puzzle</param>
+    public void LoadPuzzle(string input)
+    {
+        int inputLength = 0;
+        for (int i = 0; i < input.Length; ++i)
         {
-            for (int col = 0; col < settings.GridSize; col++)
+            if (!char.IsWhiteSpace(input[i]))
+                inputLength++;
+        }
+
+        size = (int)Math.Sqrt(inputLength);
+        if (size * size != inputLength || !(size == 4 || size == 9 || size == 16 || size == 25))
+            throw new ArgumentException("Invalid input length");
+
+        board = new int[inputLength];
+        int boardIndex = 0;
+        for (int i = 0; i < input.Length; ++i)
+        {
+            char c = input[i];
+            if (!char.IsWhiteSpace(c))
             {
-                cells[row, col] = new Cell { Row = row, Col = col };
+                int value = c - '0';
+                if (value < 0 || value > size)
+                    throw new ArgumentException($"Invalid character '{c}' at position {i}");
+                board[boardIndex++] = value;
             }
         }
+        Init();
     }
 
+
+
+
     /// <summary>
-    /// Initializes all regions (rows, columns, and boxes) with references to the appropriate cells.
+    /// Initializes the board's internal state, including rows, columns, and boxes masks.
+    /// Sets up box information and finds empty cells. 
+    /// 
+    /// Also applies initial solving heuristics.
+    /// 
+    /// this is very very very IMPORTENT!!!!
+    /// removes unsolvable boards problems
+    /// 
+    /// 
+    /// Called after loading a new puzzle.
     /// </summary>
-    private void InitializeRegions()
+    private void Init()
     {
-        // Initialize arrays
-        for (int i = 0; i < settings.GridSize * 3; i++)
+        emptyCells.Clear();
+
+        // Initialize rows, cols, and boxes.
+        rows = new uint[size];
+        cols = new uint[size];
+        boxes = new uint[size];
+        uint startBits = GetStartBits();
+        for (int i = 0; i < size; i++)
         {
-            regions[i] = new List<Cell>();
+            rows[i] = startBits;
+            cols[i] = startBits;
+            boxes[i] = startBits;
         }
 
-        // Add rows
-        for (int row = 0; row < settings.GridSize; row++)
+        sqrtSize = (int)Math.Sqrt(size);
+        boxColumnMasks = new uint[size];
+        boxInfos = new BoxInfo[size];
+
+        for (int b = 0; b < size; b++)
         {
-            for (int col = 0; col < settings.GridSize; col++)
+            int boxColGroup = b % sqrtSize;
+            boxColumnMasks[b] = (((1u << sqrtSize) - 1)) << (boxColGroup * sqrtSize);
+
+            int boxRow = b / sqrtSize;
+            int boxCol = b % sqrtSize;
+            boxInfos[b] = new BoxInfo
             {
-                regions[row].Add(cells[row, col]);                           // Rows
-                regions[col + settings.GridSize].Add(cells[row, col]);       // Columns
-
-                // Calculate box index and add to boxes
-                int boxRow = row / settings.BoxSize;
-                int boxCol = col / settings.BoxSize;
-                int boxIndex = boxRow * settings.BoxSize + boxCol + (settings.GridSize * 2);
-                regions[boxIndex].Add(cells[row, col]);
-            }
+                StartRow = boxRow * sqrtSize,
+                EndRow = (boxRow + 1) * sqrtSize - 1,
+                StartCol = boxCol * sqrtSize,
+                EndCol = (boxCol + 1) * sqrtSize - 1
+            };
         }
+
+        FindEmptyCellsAndPossibleValuesForTheCell();
+        // Apply initial heuristics.
+        _ = Heuristics.ApplyHeuristics(this);
     }
 
-    /// <summary>
-    /// Sets the board state from a 2D array and analyzes initial possibilities.
-    /// </summary>
-    public void SetBoard(int[,] grid)
-    {
-        for (int row = 0; row < settings.GridSize; row++)
-        {
-            for (int col = 0; col < settings.GridSize; col++)
-            {
-                cells[row, col].Value = grid[row, col];
-            }
-        }
-        AnalyzePossibilities();
-    }
+
+
+
+
+
 
     /// <summary>
-    /// Analyzes and updates all possibilities for empty cells based on current board state.
+    /// Scans the board to identify empty cells and updates the possible values masks
+    /// for rows, columns, and boxes based on filled cells. Empty cells are added to
+    /// the emptyCells list, while filled cells update the corresponding bitmasks.
     /// </summary>
-    public void AnalyzePossibilities()
+    private void FindEmptyCellsAndPossibleValuesForTheCell()
     {
-        // Reset possibilities for empty cells
-        foreach (var cell in cells)
+        for (int row = 0; row < size; row++)
         {
-            if (cell.Value == 0)
+            for (int col = 0; col < size; col++)
             {
-                cell.Possibilities.Clear();
-                cell.Possibilities.AddRange(Enumerable.Range(1, settings.GridSize));
-            }
-            else
-            {
-                cell.Possibilities.Clear();
-            }
-        }
-
-        // Remove invalid possibilities based on regions
-        foreach (var region in regions)
-        {
-            var usedValues = region.Where(c => c.Value != 0).Select(c => c.Value).ToList();
-            foreach (var cell in region.Where(c => c.Value == 0))
-            {
-                cell.Possibilities.RemoveAll(p => usedValues.Contains(p));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Sets a value in a specific cell and updates affected cells' possibilities.
-    /// </summary>
-    public void SetValue(int row, int col, int value)
-    {
-        var cell = cells[row, col];
-        int oldValue = cell.Value;
-        cell.Value = value;
-
-        if (value != 0)
-        {
-            cell.Possibilities.Clear();
-            UpdateAffectedCells(row, col, value);
-        }
-        else
-        {
-            RestorePossibilities(row, col, oldValue);
-            AnalyzePossibilities();
-        }
-    }
-
-    /// <summary>
-    /// Updates possibilities for all cells affected by a change at the specified position.
-    /// </summary>
-    /// <param name="row">Row index of the changed cell</param>
-    /// <param name="col">Column index of the changed cell</param>
-    /// <param name="value">New value that was set</param>
-    private void UpdateAffectedCells(int row, int col, int value)
-    {
-        // Remove 'value' from possibilities in the same row, column, and box
-        foreach (var cell in regions[row])
-        {
-            // Remove 'value' from possibilities
-            cell.Possibilities.Remove(value);
-        }
-        foreach (var cell in regions[settings.GridSize + col])
-        {
-            // Remove 'value' from possibilities
-            cell.Possibilities.Remove(value);
-        }
-        int boxRow = row / settings.BoxSize;
-        int boxCol = col / settings.BoxSize;
-        int boxIndex = boxRow * settings.BoxSize + boxCol + (settings.GridSize * 2);
-        foreach (var cell in regions[boxIndex])
-        {
-            // Remove 'value' from possibilities
-            cell.Possibilities.Remove(value);
-        }
-
-    }
-
-    /// <summary>
-    /// Restores possibilities for cells affected by removing a value.
-    /// </summary>
-    /// <param name="row">Row index of the changed cell</param>
-    /// <param name="col">Column index of the changed cell</param>
-    /// <param name="oldValue">Value that was removed</param>
-    private void RestorePossibilities(int row, int col, int oldValue)
-    {
-        foreach (var region in regions.Where(r => r.Contains(cells[row, col])))
-        {
-            foreach (var cell in region.Where(c => c.Value == 0))
-            {
-                if (!cell.Possibilities.Contains(oldValue) && IsValuePossible(cell, oldValue))
+                int box = (row / sqrtSize) * sqrtSize + (col / sqrtSize);
+                int index = row * size + col;
+                int boardValue = board[index];
+                if (boardValue == 0)
                 {
-                    cell.Possibilities.Add(oldValue);
-                    cell.Possibilities.Sort();
+                    emptyCells.Add(new Cell(row, col, box));
+                }
+                else
+                {
+                    uint value = 1u << (boardValue - 1);
+                    // XOR to remove candidate (assumes puzzle has no duplicate digits).
+                    rows[row] ^= value;
+                    cols[col] ^= value;
+                    boxes[box] ^= value;
                 }
             }
         }
     }
-    /// <summary>
-    /// Checks if a value can be legally placed in a cell.
-    /// </summary>
-    /// <param name="cell">The cell to check</param>
-    /// <param name="value">The value to check</param>
-    /// <returns>True if the value is legal in this cell</returns>
-    private bool IsValuePossible(Cell cell, int value)
-    {
-        return !regions.Where(r => r.Contains(cell))
-                      .Any(r => r.Any(c => c.Value == value));
-    }
+
+
+
+
+
+
+
+
+
+
 
     /// <summary>
-    /// Checks if the current board state is valid according to puzzle rules.
+    /// Removes a specified cell from the emptyCells list. Used when a cell is filled
+    /// during the solving process.
     /// </summary>
-    /// <returns>True if the board is valid and complete</returns>
-    public bool IsValid()
+    /// <param name="cell">The cell to remove from emptyCells</param>
+    private void RemoveEmptyCell(Cell cell)
     {
-        foreach (var region in regions)
+        for (int i = emptyCells.Count - 1; i >= 0; i--)
         {
-            var values = region.Select(c => c.Value).Where(v => v != 0);
-            if (values.Count() != values.Distinct().Count())
+            if (emptyCells[i].Equals(cell))
+            {
+                emptyCells.RemoveAt(i);
+                break;
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// Returns the initial bitmask for candidate values based on the puzzle size.
+    /// For example, a 9x9 puzzle returns 0x1FF (binary: 111111111).
+    /// to show the allowed values to enter
+    /// Throws ArgumentException for unsupported Sudoku sizes.
+    /// </summary>
+    /// <returns>uint bitmask representing all possible values for the given size</returns>
+    private uint GetStartBits()
+    {
+        return size switch
+        {
+            4 => 0xFu,
+            9 => 0x1FFu,
+            16 => 0xFFFFu,
+            25 => 0x1FFFFFFu,
+            _ => throw new ArgumentException("Unsupported Sudoku size")
+        };
+    }
+
+
+
+
+
+
+    /// <summary>
+    /// Creates a deep copy of the current board state, including the board array,
+    /// rows, columns, boxes masks, and empty cells list. Used for backtracking
+    /// during solving.
+    /// 
+    /// importent for board changes
+    /// </summary>
+    /// <returns>BoardState containing the current state</returns>
+    public BoardState SaveState()
+    {
+        return new BoardState
+        {
+            board = (int[])board.Clone(),
+            rows = (uint[])rows.Clone(),
+            cols = (uint[])cols.Clone(),
+            boxes = (uint[])boxes.Clone(),
+            emptyCells = new List<Cell>(emptyCells)
+        };
+    }
+
+
+
+
+
+    /// <summary>
+    /// Restores the board to a previously saved state.
+    /// </summary>
+    /// <param name="state">BoardState to restore from</param>
+    public void RestoreState(BoardState state)
+    {
+        board = state.board;
+        rows = state.rows;
+        cols = state.cols;
+        boxes = state.boxes;
+        emptyCells = state.emptyCells;
+    }
+
+
+
+
+    /// <summary>
+    /// Prints the board
+    /// </summary>
+    public void Print()
+    {
+        if (board == null || board.Length != size * size)
+        {
+            Console.WriteLine("Nothing to print");
+            return;
+        }
+        for (int row = 0; row < size; row++)
+        {
+            for (int col = 0; col < size; col++)
+            {
+                int value = board[row * size + col];
+                char c = value == 0 ? '.' : (char)('0' + value);
+                Console.Write($"{c} ");
+                if ((col + 1) % sqrtSize == 0 && col != size - 1)
+                    Console.Write("| ");
+            }
+            Console.WriteLine();
+            if ((row + 1) % sqrtSize == 0 && row != size - 1)
+            {
+                int lineLength = size * 2 + (sqrtSize - 1) * 3 - 1;
+                Console.WriteLine(new string('-', lineLength));
+            }
+        }
+    }
+
+
+
+
+
+    /// <summary>
+    /// Validates the initial puzzle state to ensure it follows Sudoku rules.
+    /// Checks for duplicate digits in rows, columns, and boxes.
+    /// Also verifies that all candidate digits have valid positions in empty cells
+    /// and validates hidden pairs/triples in all regions.
+    /// 
+    /// 
+    /// 
+    /// 
+    /// realy importent for unsolveable pazzles to eliminate them at the start
+    /// 
+    /// 
+    /// </summary>
+    /// <returns>true if the puzzle is valid, false otherwise</returns>
+    public bool ValidateInitialPuzzle()
+    {
+        // Check for duplicate digits in each row.
+        for (int r = 0; r < size; r++)
+        {
+            int seen = 0;
+            for (int c = 0; c < size; c++)
+            {
+                int val = board[r * size + c];
+                if (val != 0)
+                {
+                    int mask = 1 << (val - 1);
+                    if ((seen & mask) != 0)
+                        return false;
+                    seen |= mask;
+                }
+            }
+        }
+
+        // Check for duplicate digits in each column.
+        for (int c = 0; c < size; c++)
+        {
+            int seen = 0;
+            for (int r = 0; r < size; r++)
+            {
+                int val = board[r * size + c];
+                if (val != 0)
+                {
+                    int mask = 1 << (val - 1);
+                    if ((seen & mask) != 0)
+                        return false;
+                    seen |= mask;
+                }
+            }
+        }
+
+        // Check for duplicate digits in each box.
+        for (int b = 0; b < size; b++)
+        {
+            BoxInfo info = boxInfos[b];
+            int seen = 0;
+            for (int r = info.StartRow; r <= info.EndRow; r++)
+            {
+                for (int c = info.StartCol; c <= info.EndCol; c++)
+                {
+                    int val = board[r * size + c];
+                    if (val != 0)
+                    {
+                        int mask = 1 << (val - 1);
+                        if ((seen & mask) != 0)
+                            return false;
+                        seen |= mask;
+                    }
+                }
+            }
+        }
+
+
+
+        // Check that every candidate digit appears in at least one empty cell for each region.
+        // Rows.
+        for (int r = 0; r < size; r++)
+        {
+            uint rowCandidates = rows[r];
+            for (int num = 1; num <= size; num++)
+            {
+                uint mask = 1u << (num - 1);
+                if ((rowCandidates & mask) != 0)
+                {
+                    bool found = false;
+                    for (int c = 0; c < size; c++)
+                    {
+                        if (board[r * size + c] == 0)
+                        {
+                            int b = (r / sqrtSize) * sqrtSize + (c / sqrtSize);
+                            uint poss = rows[r] & cols[c] & boxes[b];
+                            if ((poss & mask) != 0)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found)
+                        return false;
+                }
+            }
+        }
+
+        // Columns.
+        for (int c = 0; c < size; c++)
+        {
+            uint colCandidates = cols[c];
+            for (int num = 1; num <= size; num++)
+            {
+                uint mask = 1u << (num - 1);
+                if ((colCandidates & mask) != 0)
+                {
+                    bool found = false;
+                    for (int r = 0; r < size; r++)
+                    {
+                        if (board[r * size + c] == 0)
+                        {
+                            int b = (r / sqrtSize) * sqrtSize + (c / sqrtSize);
+                            uint poss = rows[r] & cols[c] & boxes[b];
+                            if ((poss & mask) != 0)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found)
+                        return false;
+                }
+            }
+        }
+
+        // Boxes.
+        for (int b = 0; b < size; b++)
+        {
+            uint boxCandidates = boxes[b];
+            BoxInfo info = boxInfos[b];
+            for (int num = 1; num <= size; num++)
+            {
+                uint mask = 1u << (num - 1);
+                if ((boxCandidates & mask) != 0)
+                {
+                    bool found = false;
+                    for (int r = info.StartRow; r <= info.EndRow; r++)
+                    {
+                        for (int c = info.StartCol; c <= info.EndCol; c++)
+                        {
+                            if (board[r * size + c] == 0)
+                            {
+                                uint poss = rows[r] & cols[c] & boxes[b];
+                                if ((poss & mask) != 0)
+                                {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (found)
+                            break;
+                    }
+                    if (!found)
+                        return false;
+                }
+            }
+        }
+
+        // --- Additional hidden pair/triple check ---
+        // Validate each region using hidden sets.
+        // Rows.
+        for (int r = 0; r < size; r++)
+        {
+            List<uint> cellCands = new List<uint>();
+            for (int c = 0; c < size; c++)
+            {
+                if (board[r * size + c] == 0)
+                {
+                    int b = (r / sqrtSize) * sqrtSize + (c / sqrtSize);
+                    uint cand = rows[r] & cols[c] & boxes[b];
+                    cellCands.Add(cand);
+                }
+            }
+            if (cellCands.Count > 1 && !ValidateHiddenSetsInRegion(cellCands, rows[r], size))
                 return false;
         }
+        // Columns.
+        for (int c = 0; c < size; c++)
+        {
+            List<uint> cellCands = new List<uint>();
+            for (int r = 0; r < size; r++)
+            {
+                if (board[r * size + c] == 0)
+                {
+                    int b = (r / sqrtSize) * sqrtSize + (c / sqrtSize);
+                    uint cand = rows[r] & cols[c] & boxes[b];
+                    cellCands.Add(cand);
+                }
+            }
+            if (cellCands.Count > 1 && !ValidateHiddenSetsInRegion(cellCands, cols[c], size))
+                return false;
+        }
+        // Boxes.
+        for (int b = 0; b < size; b++)
+        {
+            List<uint> cellCands = new List<uint>();
+            BoxInfo info = boxInfos[b];
+            for (int r = info.StartRow; r <= info.EndRow; r++)
+            {
+                for (int c = info.StartCol; c <= info.EndCol; c++)
+                {
+                    if (board[r * size + c] == 0)
+                    {
+                        uint cand = rows[r] & cols[c] & boxes[b];
+                        cellCands.Add(cand);
+                    }
+                }
+            }
+            if (cellCands.Count > 1 && !ValidateHiddenSetsInRegion(cellCands, boxes[b], size))
+                return false;
+        }
+
+
+        // Returns True if every thing is ok this is a solveable pazzle
+
         return true;
     }
 
 
-    /// <summary>
-    /// Creates a deep copy of the current board, including cell values and possibilities.
-    /// </summary>
-    /// <returns>A new Board instance with identical state</returns>
-    public Board Clone()
-    {
-        // Extract current cell values into a grid
-        int[,] grid = new int[settings.GridSize, settings.GridSize];
-        for (int row = 0; row < settings.GridSize; row++)
-        {
-            for (int col = 0; col < settings.GridSize; col++)
-            {
-                grid[row, col] = cells[row, col].Value;
-            }
-        }
 
-        // Create new board with the extracted grid and same settings
-        Board clonedBoard = new Board(grid, settings);
 
-        // Deep copy possibilities for each cell
-        for (int row = 0; row < settings.GridSize; row++)
-        {
-            for (int col = 0; col < settings.GridSize; col++)
-            {
-                clonedBoard.cells[row, col].Possibilities = new List<int>(cells[row, col].Possibilities);
-            }
-        }
-
-        return clonedBoard;
-    }
 
 
     /// <summary>
-    /// Prints the current board state with formatting based on settings.
+    /// Validates hidden sets (pairs and triples) within a given region (row, column, or box).
+    /// Used as part of the puzzle validation process to ensure the puzzle is solvable.
+    ///
+    /// how it works ?
+    /// 
+    /// All Hidden Subsets work the same way, the only thing that changes is the number of cells and candidates affected by the move.
+    /// Take Hidden Pair: If you can find two cells within a house such as that two candidates 
+    /// appear nowhere outside those cells in that house, those two candidates must be placed in the two cells. 
+    /// All other candidates can therefore be eliminated.
+    /// 
+    /// 
+    /// This code it a bit disgusting
+    /// so i will explain what is does in pseudo code
+    /// 
+    /// Look for Hidden Pairs
+    ///    Find two numbers that appear only in two specific cells.
+    ///    If found, remove all other numbers from those two cells.
+    ///    
+    ///    Look for Hidden Triples
+    ///Find three numbers that appear only in three specific cells.
+    ///    If found, remove all other numbers from those three cells.
+    ///    Ensure Every Digit Still Has a Place
+    ///    
+    ///Check that every required number still exists in at least one cell.
+    ///If any number is missing, return false (invalid Sudoku state).
+    ///Repeat if Changes Were Made
+    ///
+    ///
+    /// 
     /// </summary>
-    public void Print()
+    /// <param name="cellCands">List of candidate masks for cells in the region</param>
+    /// <param name="regionCand">Candidate mask for the entire region</param>
+    /// <param name="sudokuSize">Size of the Sudoku puzzle</param>
+    /// <returns>true if the region's hidden sets are valid, false otherwise</returns>
+    private bool ValidateHiddenSetsInRegion(List<uint> cellCands, uint regionCand, int sudokuSize)
     {
-        var line = settings.ShowGridLines ? new string('-', settings.GridSize * 3 + settings.BoxSize + 1) : "";
-
-        for (int i = 0; i < settings.GridSize; i++)
+        bool changed;
+        do
         {
-            if (settings.ShowGridLines)
+            changed = false;
+            // Check for hidden pairs.
+            for (int d1 = 1; d1 <= sudokuSize; d1++)
             {
-                if (i % settings.BoxSize == 0) Console.WriteLine(line);
-                Console.Write("|");
+                uint bit1 = 1u << (d1 - 1);
+                if ((regionCand & bit1) == 0)
+                    continue;
+                for (int d2 = d1 + 1; d2 <= sudokuSize; d2++)
+                {
+                    uint bit2 = 1u << (d2 - 1);
+                    if ((regionCand & bit2) == 0)
+                        continue;
+                    uint pairMask = bit1 | bit2;
+                    List<int> indices = new List<int>();
+                    for (int i = 0; i < cellCands.Count; i++)
+                    {
+                        if ((cellCands[i] & bit1) != 0 || (cellCands[i] & bit2) != 0)
+                            indices.Add(i);
+                    }
+                    if (indices.Count == 2)
+                    {
+                        foreach (int i in indices)
+                        {
+                            uint newMask = cellCands[i] & pairMask;
+                            if (newMask != cellCands[i])
+                            {
+                                cellCands[i] = newMask;
+                                if (newMask == 0)
+                                    return false;
+                                changed = true;
+                            }
+                        }
+                    }
+                }
             }
 
-            for (int j = 0; j < settings.GridSize; j++)
+            // Check for hidden triples.
+            for (int d1 = 1; d1 <= sudokuSize; d1++)
             {
-                if (cells[i, j].Value == 0)
-                    Console.Write(settings.ShowEmptySquare ? $" {settings.EmptyCell} " : "   ");
-                else
-                    Console.Write($" {cells[i, j].Value} ");
-
-                if (settings.ShowGridLines && (j + 1) % settings.BoxSize == 0)
-                    Console.Write("|");
+                uint bit1 = 1u << (d1 - 1);
+                if ((regionCand & bit1) == 0)
+                    continue;
+                for (int d2 = d1 + 1; d2 <= sudokuSize; d2++)
+                {
+                    uint bit2 = 1u << (d2 - 1);
+                    if ((regionCand & bit2) == 0)
+                        continue;
+                    for (int d3 = d2 + 1; d3 <= sudokuSize; d3++)
+                    {
+                        uint bit3 = 1u << (d3 - 1);
+                        if ((regionCand & bit3) == 0)
+                            continue;
+                        uint tripleMask = bit1 | bit2 | bit3;
+                        List<int> indices = new List<int>();
+                        for (int i = 0; i < cellCands.Count; i++)
+                        {
+                            if ((cellCands[i] & tripleMask) != 0)
+                                indices.Add(i);
+                        }
+                        if (indices.Count == 3)
+                        {
+                            foreach (int i in indices)
+                            {
+                                uint newMask = cellCands[i] & tripleMask;
+                                if (newMask != cellCands[i])
+                                {
+                                    cellCands[i] = newMask;
+                                    if (newMask == 0)
+                                        return false;
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            Console.WriteLine();
-        }
+        } while (changed);
 
-        if (settings.ShowGridLines) Console.WriteLine(line);
-    }
-
-    /// <summary>
-    /// Copies all cell values and possibilities from another board with identical settings
-    /// </summary>
-    /// <param name="source">Board to copy from</param>
-    /// <exception cref="InvalidOperationException">Thrown if boards have different settings</exception>
-    public void CopyFrom(Board source)
-    {
-        // Validate board compatibility
-        if (this.settings.GridSize != source.settings.GridSize ||
-            this.settings.BoxSize != source.settings.BoxSize)
+        // Finally, verify that each candidate digit appears in at least one cell.
+        for (int d = 1; d <= sudokuSize; d++)
         {
-            throw new InvalidOperationException("Cannot copy from board with different settings");
-        }
-
-        // Copy cell values and possibilities
-        for (int row = 0; row < settings.GridSize; row++)
-        {
-            for (int col = 0; col < settings.GridSize; col++)
+            uint bit = 1u << (d - 1);
+            if ((regionCand & bit) != 0)
             {
-                var sourceCell = source.cells[row, col];
-                var targetCell = this.cells[row, col];
-
-                // Direct value copy
-                targetCell.Value = sourceCell.Value;
-
-                // Deep copy possibilities
-                targetCell.Possibilities.Clear();
-                targetCell.Possibilities.AddRange(sourceCell.Possibilities);
+                bool found = false;
+                foreach (uint mask in cellCands)
+                {
+                    if ((mask & bit) != 0)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    return false;
             }
         }
-    }
-    /// <summary>
-    /// Returns a string representation of the board.
-    /// </summary>
-    /// <returns>A string containing all cell values in row-major order</returns>
-    public override string ToString()
-    {
-        StringBuilder sb = new StringBuilder();
-        for (int row = 0; row < settings.GridSize; row++)
-        {
-            for (int col = 0; col < settings.GridSize; col++)
-            {
-                sb.Append(cells[row, col].Value);
-            }
-        }
-        return sb.ToString();
+        return true;
     }
 }
+
+
+
