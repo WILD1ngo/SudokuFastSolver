@@ -24,7 +24,7 @@
 /// 
 /// this solves most 9x9 sudokus in under 2 ms
 /// most 16x16 in under 50 ms
-/// and  most 25x25 in under 100 ms 
+/// and most 25x25 in under 100 ms 
 /// 
 /// </summary>
 public class Program
@@ -33,10 +33,30 @@ public class Program
     {
         while (true)
         {
+            Console.WriteLine("press 1 for input via cli and press 2 for file input");
 
 
-            Console.WriteLine("Enter Sudoku puzzle (0 for empty cells, no spaces):");
-            string input = Console.ReadLine();
+            // just for test need to change this
+            // TODO : fix ui make this look better
+            // this code is garbage
+            System.ConsoleKey key = Console.ReadKey(true).Key;
+            string input = null;
+            bool EnterFile = false;
+            string path = null;
+
+            if (key == ConsoleKey.D1)
+            {
+                Console.WriteLine("Enter Sudoku puzzle (0 for empty cells, no spaces):");
+                input = Console.ReadLine();
+            }
+            else if (key == ConsoleKey.D2)
+            {
+                Console.WriteLine("Enter full path to file");
+                path = Console.ReadLine();
+                input = FileIO.ReadFromFile(path);
+                EnterFile = true;
+
+            }
 
             Board board = new Board();
             try
@@ -64,6 +84,10 @@ public class Program
                 {
                     Console.WriteLine("No solution exists!");
                     timer.PrintTime();
+                }
+                if (EnterFile)
+                {
+                    FileIO.WriteToFile(path, board.ToString());
                 }
             }
             catch (Exception ex)
