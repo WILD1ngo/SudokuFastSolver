@@ -209,7 +209,7 @@ public class Board
 
         FindEmptyCellsAndPossibleValuesForTheCell();
         // Apply initial heuristics.
-        _ = Heuristics.ApplyHeuristics(this);
+        Heuristics.ApplyHeuristics(this);
     }
 
 

@@ -1,8 +1,12 @@
 ﻿
 public static class FileIO
 {
-    public static string ReadFromFile(string path)
+    public static string ReadFromFile(string? path)
     {
+        if (path == null)
+        {
+            throw new ArgumentNullException("path");
+        }
         return File.ReadAllText(path);
     }
 

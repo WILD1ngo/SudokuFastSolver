@@ -26,4 +26,9 @@ public class TimeTracker
         TimeSpan timeTaken = _endTime - _startTime;
         Console.WriteLine($"\n\nTime taken: {timeTaken.TotalMilliseconds} ms");
     }
+    public void WriteTime()
+    {
+        TimeSpan timeTaken = _endTime - _startTime;
+        Console.Write($"\n\nTime taken: {timeTaken.TotalMilliseconds} ms");
+    }
 }

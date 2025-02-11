@@ -14,7 +14,7 @@ public readonly struct Cell : IEquatable<Cell>
         Box = box;
     }
 
-    // IEquatable<T> for better commpreing
+    // IEquatable<T> for commpreing
     public bool Equals(Cell other) =>
         Row == other.Row && Col == other.Col && Box == other.Box;
 
