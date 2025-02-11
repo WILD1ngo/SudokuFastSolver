@@ -10,7 +10,7 @@ public static class Heuristics
 
     /// <summary>
     /// applies all solving heuristics repeatedly until no more changes occur
-    /// 
+    ///
     /// 
     /// pretty simple function 
     /// </summary>
@@ -45,7 +45,7 @@ public static class Heuristics
     /// 
     /// the number in a cell can appear only once in
     /// each block, each row, and each column. 
-    /// For each cell we can create a list of possible candidates that can appear in a cell. \
+    /// For each cell we can create a list of possible candidates that can appear in a cell. 
     /// We can remove from this list of candidates any number that appears in the same block, row, or column.
     /// For some cells, the list of possible candidates may have only one single number.
     /// This is called a "Naked Single", 
@@ -251,7 +251,7 @@ public static class Heuristics
     /// <summary>
     /// Method to remove a cell from the empty cells list
     /// 
-    /// Mainly used as an helper methed
+    /// used as an helper methed
     /// </summary>
     private static void RemoveEmptyCell(List<Cell> emptyCells, Cell cell)
     {

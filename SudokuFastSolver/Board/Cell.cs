@@ -3,7 +3,6 @@
 /// </summary>
 public readonly struct Cell : IEquatable<Cell>
 {
-    // Using auto-properties as they are optimized by the compiler for readonly structs
     public int Row { get; }
     public int Col { get; }
     public int Box { get; }

@@ -55,6 +55,7 @@ public class Program
                 {
                     Console.WriteLine("\nSolution:");
                     board.Print();
+                    Console.WriteLine(board);
                     timer.PrintTime();
                 }
                 else

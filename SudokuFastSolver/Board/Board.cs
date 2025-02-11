@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Threading.Channels;
 using System.Threading;
+using System.Text;
 
 
 /// <summary>
@@ -137,7 +138,7 @@ public class Board
 
         size = (int)Math.Sqrt(inputLength);
         if (size * size != inputLength || !(size == 4 || size == 9 || size == 16 || size == 25))
-            throw new ArgumentException("Invalid input length");
+            throw new ArgumentException($"{size * size} is an Invalid input length ");
 
         board = new int[inputLength];
         int boardIndex = 0;
@@ -366,6 +367,23 @@ public class Board
                 Console.WriteLine(new string('-', lineLength));
             }
         }
+    }
+
+
+
+
+    /// <summary>
+    ///  Returns a simple string representation of the board.
+    /// </summary>
+    /// <returns></returns>
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder(size*size);
+        for (int i = 0; i < board.Length; i++)
+        {
+            sb.Append((char)(board[i] + '0'));
+        }
+        return sb.ToString();
     }
 
 

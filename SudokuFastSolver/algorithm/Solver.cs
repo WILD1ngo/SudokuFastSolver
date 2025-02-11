@@ -5,7 +5,7 @@ public class Solver
 {
 
     // Stores reference to the Board being solved
-    private readonly Board board;
+    private readonly Board _board;
 
 
 
@@ -14,7 +14,7 @@ public class Solver
     /// </summary>
     public Solver(Board board)
     {
-        this.board = board;
+        this._board = board;
     }
 
 
@@ -38,13 +38,13 @@ public class Solver
     public bool Solve()
     {
         // Validate the puzzle first.
-        if (!board.ValidateInitialPuzzle())
+        if (!_board.ValidateInitialPuzzle())
             return false;
 
         // Pre-check: ensure every empty cell has at least one candidate.
-        foreach (Cell cell in board.emptyCells)
+        foreach (Cell cell in _board.emptyCells)
         {
-            uint possible = board.rows[cell.Row] & board.cols[cell.Col] & board.boxes[cell.Box];
+            uint possible = _board.rows[cell.Row] & _board.cols[cell.Col] & _board.boxes[cell.Box];
             if (possible == 0)
                 return false;
         }
@@ -82,17 +82,17 @@ public class Solver
 
 
         // Phase 1: Save current state and apply heuristics
-        BoardState state = board.SaveState();
-        if (!Heuristics.ApplyHeuristics(board))
+        BoardState state = _board.SaveState();
+        if (!Heuristics.ApplyHeuristics(_board))
         {
-            board.RestoreState(state);
+            _board.RestoreState(state);
             return false;
         }
 
 
 
         // Phase 2: Check if solved
-        if (board.emptyCells.Count == 0)
+        if (_board.emptyCells.Count == 0)
             return true;
 
 
@@ -100,17 +100,17 @@ public class Solver
 
         // Phase 3: Select most constrained cell
         MoveCellWithLowestPossibilitiesToFront(0);
-        Cell cell = board.emptyCells[0];
-        board.emptyCells.RemoveAt(0);
+        Cell cell = _board.emptyCells[0];
+        _board.emptyCells.RemoveAt(0);
 
 
 
 
         // Phase 4: Get possible values for selected cell
         // this is a little bit messi because bitwise
-        uint possibleCandidates = board.rows[cell.Row] &
-                                 board.cols[cell.Col] &
-                                 board.boxes[cell.Box];
+        uint possibleCandidates = _board.rows[cell.Row] &
+                                 _board.cols[cell.Col] &
+                                 _board.boxes[cell.Box];
         int candidateCount = BitOperations.PopCount(possibleCandidates);
 
 
@@ -121,7 +121,7 @@ public class Solver
         Span<uint> candidates = stackalloc uint[candidateCount];
         // Uses stack allocation for temporary arrays realy 
         // makes this a faster
-        // and we hate allocating array in the heap even if c# forces us
+        // and we hate allocating array in the heap if local even if c# forces us
         // and its a local var
         //
         // aka : its probbley better to write this in cpp and not this garbage c#
@@ -142,13 +142,13 @@ public class Solver
         for (int i = 0; i < candidateCount; i++)
         {
             uint candidateBit = candidates[i];
-            BoardState candidateState = board.SaveState();
+            BoardState candidateState = _board.SaveState();
 
             // Apply the candidate
-            board.rows[cell.Row] ^= candidateBit;
-            board.cols[cell.Col] ^= candidateBit;
-            board.boxes[cell.Box] ^= candidateBit;
-            board.board[cell.Row * board.size + cell.Col] =
+            _board.rows[cell.Row] ^= candidateBit;
+            _board.cols[cell.Col] ^= candidateBit;
+            _board.boxes[cell.Box] ^= candidateBit;
+            _board.board[cell.Row * _board.size + cell.Col] =
                 BitOperations.TrailingZeroCount(candidateBit) + 1;
 
             // Recurse
@@ -156,7 +156,7 @@ public class Solver
                 return true;
 
             // Backtrack if needed
-            board.RestoreState(candidateState);
+            _board.RestoreState(candidateState);
         }
 
         return false;
@@ -180,11 +180,11 @@ public class Solver
     private void MoveCellWithLowestPossibilitiesToFront(int idx)
     {
         int bestIdx = idx;
-        uint possible = board.rows[board.emptyCells[bestIdx].Row] & board.cols[board.emptyCells[bestIdx].Col] & board.boxes[board.emptyCells[bestIdx].Box];
+        uint possible = _board.rows[_board.emptyCells[bestIdx].Row] & _board.cols[_board.emptyCells[bestIdx].Col] & _board.boxes[_board.emptyCells[bestIdx].Box];
         int bestCount = BitOperations.PopCount(possible);
-        for (int i = idx + 1; i < board.emptyCells.Count; i++)
+        for (int i = idx + 1; i < _board.emptyCells.Count; i++)
         {
-            possible = board.rows[board.emptyCells[i].Row] & board.cols[board.emptyCells[i].Col] & board.boxes[board.emptyCells[i].Box];
+            possible = _board.rows[_board.emptyCells[i].Row] & _board.cols[_board.emptyCells[i].Col] & _board.boxes[_board.emptyCells[i].Box];
             int currentCount = BitOperations.PopCount(possible);
             if (currentCount < bestCount)
             {
@@ -196,9 +196,9 @@ public class Solver
         }
         if (bestIdx != idx)
         {
-            Cell temp = board.emptyCells[idx];
-            board.emptyCells[idx] = board.emptyCells[bestIdx];
-            board.emptyCells[bestIdx] = temp;
+            Cell temp = _board.emptyCells[idx];
+            _board.emptyCells[idx] = _board.emptyCells[bestIdx];
+            _board.emptyCells[bestIdx] = temp;
         }
     }
 
@@ -216,7 +216,7 @@ public class Solver
     /// Sudoku cell based on how much they 
     /// constrain other empty cells' possibilities.
     /// 
-    /// What is constrain? this is a great question
+    /// What is constrain? oohhhh is a great question
     /// 
     /// For each candidate number that could go in the current cell
     /// it counts how many other empty cells would have their possibilities reduced if we used that number
@@ -242,32 +242,32 @@ public class Solver
     {
         // Local array on the stack to be faster 
         Span<int> candidateConstraints = stackalloc int[count];
-        BoxInfo info = board.boxInfos[box];
+        BoxInfo info = _board.boxInfos[box];
 
         for (int i = 0; i < count; i++)
         {
             uint candidate = candidates[i];
             int constraintCount = 0;
             // Evaluate row constraints.
-            for (int c = 0; c < board.size; c++)
+            for (int c = 0; c < _board.size; c++)
             {
                 if (c == col)
                     continue;
-                if (board.board[row * board.size + c] == 0)
+                if (_board.board[row * _board.size + c] == 0)
                 {
-                    uint poss = board.rows[row] & board.cols[c] & board.boxes[(row / board.sqrtSize) * board.sqrtSize + (c / board.sqrtSize)];
+                    uint poss = _board.rows[row] & _board.cols[c] & _board.boxes[(row / _board.sqrtSize) * _board.sqrtSize + (c / _board.sqrtSize)];
                     if ((poss & candidate) != 0)
                         constraintCount++;
                 }
             }
             // Evaluate column constraints.
-            for (int r = 0; r < board.size; r++)
+            for (int r = 0; r < _board.size; r++)
             {
                 if (r == row)
                     continue;
-                if (board.board[r * board.size + col] == 0)
+                if (_board.board[r * _board.size + col] == 0)
                 {
-                    uint poss = board.rows[r] & board.cols[col] & board.boxes[(r / board.sqrtSize) * board.sqrtSize + (col / board.sqrtSize)];
+                    uint poss = _board.rows[r] & _board.cols[col] & _board.boxes[(r / _board.sqrtSize) * _board.sqrtSize + (col / _board.sqrtSize)];
                     if ((poss & candidate) != 0)
                         constraintCount++;
                 }
@@ -279,9 +279,9 @@ public class Solver
                 {
                     if (r == row && c == col)
                         continue;
-                    if (board.board[r * board.size + c] == 0)
+                    if (_board.board[r * _board.size + c] == 0)
                     {
-                        uint poss = board.rows[r] & board.cols[c] & board.boxes[box];
+                        uint poss = _board.rows[r] & _board.cols[c] & _board.boxes[box];
                         if ((poss & candidate) != 0)
                             constraintCount++;
                     }
