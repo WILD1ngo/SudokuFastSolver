@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 /// by erictuvesson
 /// https://github.com/erictuvesson/CSharpCurses.git
 /// 
-/// Check out hes code he has some nice stuff there 
+/// Check the code 
 /// 
 /// 
 /// </summary>
