@@ -172,13 +172,11 @@ public static class CLI
     /// </summary>
     private static void DrawTitle()
     {
-        string title = @"
-___  _ ____  ____  _       ____  _     ____  ____  _  __ _      
-\  \///  _ \/  _ \/ \ |\  / ___\/ \ /\/  _ \/  _ \/ |/ // \ /\  
- \  / | / \|| / \|| | //  |    \| | ||| | \|| / \||   / | | ||  
- / /  | \_/|| |-||| \//   \___ || \_/|| |_/|| \_/||   \ | \_/|  
-/_/   \____/\_/ \|\__/    \____/\____/\____/\____/\_|\_\\____/  
-                                                                
+        string title = @"██    ██  ██████   █████  ██    ██     ███████ ██    ██ ██████   ██████  ██   ██ ██    ██ 
+ ██  ██  ██    ██ ██   ██ ██    ██     ██      ██    ██ ██   ██ ██    ██ ██  ██  ██    ██ 
+  ████   ██    ██ ███████ ██    ██     ███████ ██    ██ ██   ██ ██    ██ █████   ██    ██ 
+   ██    ██    ██ ██   ██  ██  ██           ██ ██    ██ ██   ██ ██    ██ ██  ██  ██    ██ 
+   ██     ██████  ██   ██   ████       ███████  ██████  ██████   ██████  ██   ██  ██████  
 ";
         Console.ForegroundColor = ConsoleColor.DarkGray;
         string[] titleLines = title.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
@@ -325,7 +323,7 @@ ___  _ ____  ____  _       ____  _     ____  ____  _  __ _
         Console.WriteLine("Press Tab to move the button and Enter to Select");
         for (int i = 0; i < _buttons.Length; i++)
         {
-            DrawButton(i, startX, (i+1) * startY + 3 * startY);
+            DrawButton(i, startX, (i+1) * startY + 5 * startY);
         }
         Console.ResetColor();
     }
@@ -364,7 +362,7 @@ ___  _ ____  ____  _       ____  _     ____  ____  _  __ _
     /// </summary>
     private static bool IsValidGridSize(int size)
     {
-        return size is 4 or 9 or 16 or 25;
+        return Math.Sqrt(size)* Math.Sqrt(size) == size && size >= 4 && size <= 25;
     }
 
 
@@ -509,7 +507,7 @@ ___  _ ____  ____  _       ____  _     ____  ____  _  __ _
 
 
     /// <summary>
-    /// pretty forward 
+    /// pretty straight forward 
     /// </summary>
     public static void PrintConectedFile()
     {
