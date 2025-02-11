@@ -33,6 +33,8 @@ public class Program
     {
         while (true)
         {
+
+
             Console.WriteLine("Enter Sudoku puzzle (0 for empty cells, no spaces):");
             string input = Console.ReadLine();
 
