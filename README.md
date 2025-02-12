@@ -40,33 +40,46 @@ A high-performance Sudoku solver implementation in C# that solves puzzles of siz
 
 ## How To Use
 **run the app:**
+
 first you will be greated with  this pretty UI
+![](documentation/photos/home.png)
 
 **change the size:**
+
 click tab to move the curser and select (using Enter) "change size" button
 change to the size you want 
-
+![](documentation/photos/ChangeSize.png)
 **load the board:**
 you can insert the board in two ways
 
 1. via the CLI just press the CLI and enter the string of chars for the board
-2. from file **make sure that the file has the pazzle with the correct size in or it wont work** Enter the file path  make sure it show in the file at the left bottom 
-
+2. from file **make sure that the file has the pazzle with the correct size in or it wont work**
+    Enter the file path  make sure it show in the file at the left bottom 
+![](documentation/photos/file.png)
 **string:**
+
 for example in 16 x 16 pazzles 
+
 if i want to write 10 
+
 i need to insert the tenth number after '1'
+
 10 -> :
+
 11 -> ;
+
 as you can see in the follow ascii table
 ![](https://www.johndcook.com/ascii.png)
 
 in the end:
+
 you should get a string like this (16x16):
 ```0000000<0700000=30000>?00=05@6:0;>00719003?004<000000=20490000100?100000:0;00907@030065190700002=00>0<00000600508002003704000<>09000020;60100000?2<005030>009061000590002803000000>000000<0?3000000000100000:32000;0<300=00000?50603240070000@0001?0=0;@<:006870``` 
 
 **Then Just Click on The solve button and wait for solution**
 (note : if its a very hard 25x25 and you click two times on the enter you might get that the time is realy low because  you activate the solver again once its solved)
+
+![](documentation/photos/afterSolve.png)
 ## How To Run The Tests
 
 1.Open Test Explorer:
@@ -86,6 +99,9 @@ After the tests have completed, a green check mark indicates that a test passed.
 | 9x9	| <10ms  |
 | 16x16   |<100ms |
 | 25x25	    |   <200ms  |
+
+
+
 
 **How The Algorithm So Fast?**
 Explantion in the following readme
