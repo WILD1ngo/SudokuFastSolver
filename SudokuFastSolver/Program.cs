@@ -166,6 +166,7 @@ public class Program
             {
                 Console.WriteLine("\nSolution:");
                 solvedBoard.Print();
+                Console.WriteLine(solvedBoard.ToString());
                 timer.PrintTime();
             }
             else
@@ -196,7 +197,7 @@ public class Program
     {
         Console.CancelKeyPress += (sender, e) =>
         {
-            Console.WriteLine("\nHEYYYYY YOU THOUGHT I WOUDNT NOTICE \nTheres a Button for this!!!");
+            Console.WriteLine("\nHEYYYYY \nTheres a Button for this!!!");
             e.Cancel = true; // Allow the program to exit
         };
     }

@@ -31,10 +31,10 @@ read the [Algorithm explantion](documentation/Algoritem.md)
 
 
 
-## Installation
+## Installations
    ```bash
-   git clone https://github.com/yourusername/sudoku-solver.git
-   cd sudoku-solver
+   git clone https://github.com/WILD1ngo/SudokuFastSolver.git
+   cd SudokuFastSolver
    dotnet build
    dotnet run
    ```
