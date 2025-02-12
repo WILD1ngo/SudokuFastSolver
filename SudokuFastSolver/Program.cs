@@ -37,12 +37,13 @@ public class Program
     {
         while (true)
         {
+
             
             //turn on or off the gui
             bool GUI = true; 
             try
-            { 
-
+            {
+                CatchControlC();
                 //its get the input via GUI or CLI
                 string? input = getInput(GUI); // gets the input from the user
 
@@ -188,5 +189,15 @@ public class Program
             }
 
         }
+    }
+
+
+    public static void CatchControlC()
+    {
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            Console.WriteLine("\nHEYYYYY YOU THOUGHT I WOUDNT NOTICE \nTheres a Button for this!!!");
+            e.Cancel = true; // Allow the program to exit
+        };
     }
 }

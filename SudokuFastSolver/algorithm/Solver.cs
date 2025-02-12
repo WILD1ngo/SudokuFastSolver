@@ -236,7 +236,7 @@ public class Solver
     /// aka:
     /// its pretty simple but it took me 3 hours to make this work 
     /// I dont know why this took so long
-    /// FUCK
+    /// 
     /// </summary>
     private void OrderCandidatesByLeastConstraining(int row, int col, int box, Span<uint> candidates, int count)
     {
@@ -244,18 +244,18 @@ public class Solver
         Span<int> candidateConstraints = stackalloc int[count];
         BoxInfo info = _board.boxInfos[box];
 
-        for (int i = 0; i < count; i++)
+        for (int index = 0; index < count; index++)
         {
-            uint candidate = candidates[i];
+            uint candidate = candidates[index];
             int constraintCount = 0;
             // Evaluate row constraints.
-            for (int c = 0; c < _board.size; c++)
+            for (int colum = 0; colum < _board.size; colum++)
             {
-                if (c == col)
+                if (colum == col)
                     continue;
-                if (_board.board[row * _board.size + c] == 0)
+                if (_board.board[row * _board.size + colum] == 0)
                 {
-                    uint poss = _board.rows[row] & _board.cols[c] & _board.boxes[(row / _board.sqrtSize) * _board.sqrtSize + (c / _board.sqrtSize)];
+                    uint poss = _board.rows[row] & _board.cols[colum] & _board.boxes[(row / _board.sqrtSize) * _board.sqrtSize + (colum / _board.sqrtSize)];
                     if ((poss & candidate) != 0)
                         constraintCount++;
                 }
@@ -287,7 +287,7 @@ public class Solver
                     }
                 }
             }
-            candidateConstraints[i] = constraintCount;
+            candidateConstraints[index] = constraintCount;
         }
 
 

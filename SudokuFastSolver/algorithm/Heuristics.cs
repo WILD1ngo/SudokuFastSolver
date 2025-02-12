@@ -20,7 +20,7 @@ public static class Heuristics
         bool changed;
         do
         {
-            changed = ProcessNakedSingles(board) | ProcessHiddenSingles(board);
+            changed = ProcessNakedSingles(board) || ProcessHiddenSingles(board);
 
             // Check for any empty cell with no possibility.
             // If so return that the board is unsolvable
