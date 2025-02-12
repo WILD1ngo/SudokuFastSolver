@@ -59,4 +59,25 @@ and solve only with
 **how we store the board now?**
 we only save the possible values for rows cols and box then to check if value is possible to insert 
 
-## TODO : continue explantion
+we save pre row col and box 
+and unsigned int that saves the possible values to enter
+
+for example in a row you have 111111000
+which means you can this row missing 1 , 2 , 3
+
+
+now lets say i look at a cell i can tell what needs to be inseted by
+bitwise op
+row & col & box
+and i can look and change in O(1) values on the board 
+the advantages are pretty clear 
+
+
+but the disadvantage is that you cant do all the heuristics 
+
+
+
+ToDo continue to write
+
+
+
