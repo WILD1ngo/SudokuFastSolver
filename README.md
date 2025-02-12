@@ -3,6 +3,8 @@
 
 A high-performance Sudoku solver implementation in C# that solves puzzles of sizes 4x4, 9x9, 16x16, and 25x25 using backtracking search with  heuristics.
 
+read the [Algorithm explantion](documentation/Algoritem.md)
+
 
 ![alt text](https://sudoku-puzzles.net/wp-content/puzzles/butterfly-sudoku/easy/1.png)
 
@@ -31,8 +33,8 @@ A high-performance Sudoku solver implementation in C# that solves puzzles of siz
 
 ## Installation
    ```bash
-   git clone https://github.com/yourusername/sudoku-solver.git
-   cd sudoku-solver
+   git clone https://github.com/WILD1ngo/SudokuFastSolver.git
+   cd SudokuFastSolver
    dotnet build
    dotnet run
    ```
@@ -103,13 +105,12 @@ After the tests have completed, a green check mark indicates that a test passed.
 
 
 
-**How The Algorithm So Fast?**
+## How The Algorithm So Fast?
 Explantion in the following readme
+[link](documentation/Algoritem.md)
 
 
-**GUI**
 
-has pretty nice gui like vim
 
 
 ## How i would improve the project further
